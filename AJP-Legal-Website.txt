@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Legal Document Library — AJP Law Firm</title>
+
+  <!-- CDN: Fuse.js (fuzzy search), jsPDF (PDF export) -->
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f0f10;
+      --card:#161618;
+      --muted:#bdbdbd;
+      --accent:#c5a253; /* gold */
+      --accent-2:#e3bf6c;
+      --glass: rgba(255,255,255,0.03);
+      --danger:#c85a5a;
+      --radius:10px;
+      font-family: "Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#0b0b0c 0%, #0f1112 100%);color:#eee}
+    .container{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;gap:16px;align-items:center;padding:16px;border-radius:12px;background:linear-gradient(90deg, rgba(26,26,26,0.9), rgba(20,20,20,0.85));border:1px solid rgba(197,162,83,0.12)}
+    header img{height:72px;width:auto;border-radius:8px}
+    header .brand{display:flex;flex-direction:column}
+    header h1{margin:0;font-size:20px;color:var(--accent)}
+    header p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+
+    .topbar{display:flex;gap:12px;align-items:center;margin-top:18px}
+    .search {flex:1;display:flex;gap:10px;align-items:center}
+    .search input{width:100%;padding:12px;border-radius:12px;background:var(--glass);border:1px solid rgba(255,255,255,0.03);color:inherit}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--accent);color:#090909;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+    .btn.warn{background:var(--danger);color:white}
+    .meta{font-size:13px;color:var(--muted)}
+
+    .grid{display:grid;grid-template-columns:1fr 340px;gap:18px;margin-top:18px}
+    main.card{background:var(--card);padding:16px;border-radius:var(--radius);border:1px solid rgba(255,255,255,0.03)}
+    aside.card{background:var(--card);padding:16px;border-radius:var(--radius);border:1px solid rgba(255,255,255,0.03)}
+    h2{color:var(--accent);margin:0 0 12px 0}
+
+    form .field{display:flex;flex-direction:column;margin-bottom:10px}
+    form input, form textarea, .modal form input{
+      padding:10px;border-radius:8px;background:#0e0e0f;border:1px solid rgba(255,255,255,0.03);color:inherit
+    }
+    textarea{min-height:100px;resize:vertical}
+
+    .list{margin-top:8px}
+    .doc{
+      display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:12px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(0,0,0,0.02));border:1px solid rgba(255,255,255,0.02);margin-bottom:8px
+    }
+    .doc .left{flex:1}
+    .doc h3{margin:0;color:var(--accent-2)}
+    .doc .meta{font-size:13px;color:var(--muted);margin-top:6px}
+    .doc p{margin:8px 0 0 0;color:#d6d6d6}
+
+    .actions{display:flex;gap:8px}
+    .small{font-size:13px;padding:8px 10px;border-radius:8px;border:0;cursor:pointer;background:transparent;color:var(--muted)}
+    .tag{background:rgba(197,162,83,0.08);color:var(--accent);padding:4px 8px;border-radius:8px;font-weight:600}
+
+    .foot{margin-top:14px;color:var(--muted);font-size:13px}
+
+    /* pagination */
+    .pagination{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:12px}
+    .page{padding:6px 8px;border-radius:6px;background:transparent;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .page.active{background:var(--accent);color:#090909;border-color:transparent}
+
+    /* modal */
+    .modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal{background:linear-gradient(180deg,#111 0,#0b0b0c 100%);padding:18px;border-radius:12px;width:720px;max-width:95%;box-shadow:0 10px 30px rgba(0,0,0,0.6);border:1px solid rgba(197,162,83,0.06)}
+    .modal h3{margin:0 0 12px 0}
+    .row{display:flex;gap:8px}
+    .col{flex:1}
+
+    /* small screens */
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr; }
+      header img{height:56px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <img src="ajp-logo.png" alt="AJP Logo" onerror="this.style.display='none'">
+      <div class="brand">
+        <h1>Legal Document Library</h1>
+        <p>Kantor Hukum Aswandy J. Pohan & Partners — Arsip Digital</p>
+      </div>
+    </header>
+
+    <div class="topbar">
+      <div class="search">
+        <input id="q" placeholder="Cari: judul, kategori, catatan... (toleran typo)" />
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="btnNew">+ Tambah</button>
+        <button class="btn ghost" id="btnExportJson">Export JSON</button>
+        <button class="btn ghost" id="btnExportPdf">Export PDF</button>
+        <button class="btn ghost" id="btnBackup">Backup</button>
+        <button class="btn ghost" id="btnRestore">Restore</button>
+        <button class="btn ghost" id="btnToggleLock">Atur Password</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <main class="card">
+        <h2>Daftar Dokumen</h2>
+
+        <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+          <div class="meta" id="metaCount">0 dokumen</div>
+
+          <div style="display:flex;gap:8px;align-items:center">
+            <label class="meta">Sort</label>
+            <select id="sortSel" style="padding:8px;border-radius:8px;background:#0f0f10;color:inherit;border:1px solid rgba(255,255,255,0.03)">
+              <option value="new">Terbaru</option>
+              <option value="old">Terlama</option>
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="list" class="list" aria-live="polite"></div>
+
+        <div class="pagination" id="pagination"></div>
+
+        <div class="foot">Tip: gunakan fitur <strong>Backup</strong> untuk menyimpan cadangan. Gunakan <strong>Restore</strong> untuk mengembalikan file .json hasil backup.</div>
+      </main>
+
+      <aside class="card">
+        <h2>Tambah Dokumen Cepat</h2>
+        <form id="quickForm">
+          <div class="field">
+            <label class="meta">Judul</label>
+            <input id="title" required />
+          </div>
+          <div class="field">
+            <label class="meta">Kategori</label>
+            <input id="category" required />
+          </div>
+          <div class="field">
+            <label class="meta">Catatan</label>
+            <textarea id="note"></textarea>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" type="submit">Simpan</button>
+            <button class="btn ghost" type="button" id="btnClear">Bersihkan</button>
+          </div>
+        </form>
+
+        <hr style="margin:14px 0;border:none;border-top:1px solid rgba(255,255,255,0.02)">
+
+        <h2>Filter & Tools</h2>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label class="meta">Filter kategori (ketik lalu tekan Enter)</label>
+          <input id="filterCategory" placeholder="Misal: Perdata" />
+
+          <label class="meta">Tombol cepat</label>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost" id="btnClearAll">Hapus Semua</button>
+            <button class="btn ghost" id="btnExportCsv">Export CSV</button>
+          </div>
+
+          <div style="margin-top:8px;color:var(--muted);font-size:13px">
+            Versi: <strong>Online-ready</strong><br>
+            Simpan otomatis ke browser (localStorage).
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer style="margin-top:18px;color:var(--muted);font-size:13px;text-align:center">
+      © 2025 Kantor Hukum Aswandy J. Pohan & Partners — Legal Document Library
+    </footer>
+  </div>
+
+  <!-- modal -->
+  <div class="modal-back" id="modalBack">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Form Dokumen">
+      <h3 id="modalTitle">Tambah Dokumen</h3>
+      <form id="modalForm">
+        <div class="row">
+          <div class="col field">
+            <label class="meta">Judul</label>
+            <input id="mTitle" required />
+          </div>
+          <div class="col field">
+            <label class="meta">Kategori</label>
+            <input id="mCategory" required />
+          </div>
+        </div>
+        <div class="field">
+          <label class="meta">Catatan</label>
+          <textarea id="mNote"></textarea>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" type="submit" id="modalSave">Simpan</button>
+          <button class="btn ghost" type="button" id="modalCancel">Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- hidden file input for restore -->
+  <input type="file" id="fileInput" accept=".json" style="display:none" />
+
+<script>
+/* --------------------------
+  App constants & helpers
+---------------------------*/
+const STORAGE_KEY = "legalDocsV4";
+const PW_KEY = "legalDocsV4_pw"; // client-side password (optional)
+let docs = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let fuse = null;
+let currentPage = 1;
+const pageSize = 8; // items per page for pagination
+let lastFilterCategory = "";
+
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function normalize(text){ return (text||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+
+/* --------------------------
+  Initialize Fuse (fuzzy search)
+---------------------------*/
+function initFuse(){
+  const options = {
+    includeScore: true,
+    threshold: 0.35, // 0.0 = exact, 1.0 = very fuzzy. adjust if needed
+    keys: [
+      {name:"title", weight:0.6},
+      {name:"category", weight:0.25},
+      {name:"note", weight:0.15}
+    ]
+  };
+  fuse = new Fuse(docs, options);
+}
+
+/* --------------------------
+  Render functions
+---------------------------*/
+function renderList(q=""){
+  const listEl = document.getElementById("list");
+  listEl.innerHTML = "";
+
+  // Search via Fuse when there's query, else take all
+  let result = [];
+  if(q && q.trim().length>0){
+    const fuseRes = fuse.search(q);
+    result = fuseRes.map(r => r.item);
+  } else {
+    result = [...docs];
+  }
+
+  // Apply category filter
+  if(lastFilterCategory && lastFilterCategory.trim()!=""){
+    const catNorm = normalize(lastFilterCategory);
+    result = result.filter(d => normalize(d.category).includes(catNorm));
+  }
+
+  // Sorting
+  const sortVal = document.getElementById("sortSel").value;
+  if(sortVal==="new") result.sort((a,b)=>b.createdAt - a.createdAt);
+  else if(sortVal==="old") result.sort((a,b)=>a.createdAt - b.createdAt);
+  else if(sortVal==="az") result.sort((a,b)=>a.title.localeCompare(b.title));
+  else if(sortVal==="za") result.sort((a,b)=>b.title.localeCompare(a.title));
+
+  // Pagination
+  const total = result.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if(currentPage > pages) currentPage = pages;
+  const start = (currentPage-1)*pageSize;
+  const pageItems = result.slice(start, start+pageSize);
+
+  // Render items
+  pageItems.forEach(d => {
+    const div = document.createElement("div");
+    div.className = "doc";
+    div.innerHTML = `
+      <div class="left">
+        <h3>${escapeHtml(d.title)}</h3>
+        <div class="meta"><span class="tag">${escapeHtml(d.category)}</span> &nbsp; • &nbsp;
+            ${new Date(d.createdAt).toLocaleString()}</div>
+        <p>${escapeHtml(d.note)}</p>
+      </div>
+      <div class="actions">
+        <button class="small" onclick="viewDoc('${d.id}')">Lihat</button>
+        <button class="small" onclick="openEdit('${d.id}')">Edit</button>
+        <button class="small" onclick="confirmDelete('${d.id}')">Hapus</button>
+      </div>
+    `;
+    listEl.appendChild(div);
+  });
+
+  // meta
+  document.getElementById("metaCount").textContent = `${total} dokumen (halaman ${currentPage}/${pages})`;
+
+  // pagination controls
+  renderPagination(pages);
+}
+
+/* escape to avoid HTML injection */
+function escapeHtml(s){ if(!s) return ""; return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+
+function renderPagination(pages){
+  const el = document.getElementById("pagination");
+  el.innerHTML = "";
+  for(let i=1;i<=pages;i++){
+    const btn = document.createElement("button");
+    btn.className = "page" + (i===currentPage ? " active" : "");
+    btn.textContent = i;
+    btn.onclick = ()=>{ currentPage = i; renderList(document.getElementById("q").value.trim()); };
+    el.appendChild(btn);
+  }
+}
+
+/* --------------------------
+  CRUD operations
+---------------------------*/
+function addDoc(obj){
+  const d = {
+    id: uid(),
+    title: obj.title || "Tanpa Judul",
+    category: obj.category || "Umum",
+    note: obj.note || "",
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  docs.push(d);
+  save(); initFuse(); renderList(document.getElementById("q").value.trim());
+}
+
+function updateDoc(id, payload){
+  const idx = docs.findIndex(x=>x.id===id);
+  if(idx>=0){
+    docs[idx] = {...docs[idx], ...payload, updatedAt: Date.now()};
+    save(); initFuse(); renderList(document.getElementById("q").value.trim());
+  }
+}
+function removeDoc(id){
+  docs = docs.filter(d=>d.id!==id);
+  save(); initFuse(); renderList(document.getElementById("q").value.trim());
+}
+
+/* --------------------------
+  UI actions: modal, edit, view, delete
+---------------------------*/
+const modalBack = document.getElementById("modalBack");
+const modalTitle = document.getElementById("modalTitle");
+let editingId = null;
+
+document.getElementById("btnNew").addEventListener("click", ()=>{
+  editingId = null;
+  modalTitle.textContent = "Tambah Dokumen";
+  document.getElementById("mTitle").value = "";
+  document.getElementById("mCategory").value = "";
+  document.getElementById("mNote").value = "";
+  modalBack.style.display = "flex";
+  document.getElementById("mTitle").focus();
+});
+document.getElementById("modalCancel").addEventListener("click", ()=> modalBack.style.display="none");
+document.getElementById("modalForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const t = document.getElementById("mTitle").value.trim();
+  const c = document.getElementById("mCategory").value.trim();
+  const n = document.getElementById("mNote").value.trim();
+  if(!t || !c){ alert("Judul dan kategori wajib diisi"); return; }
+  if(editingId){
+    updateDoc(editingId, { title: t, category: c, note: n });
+  } else {
+    addDoc({ title:t, category:c, note:n });
+  }
+  modalBack.style.display = "none";
+});
+
+function openEdit(id){
+  const d = docs.find(x=>x.id===id);
+  if(!d) return alert("Data tidak ditemukan");
+  editingId = id;
+  modalTitle.textContent = "Ubah Dokumen";
+  document.getElementById("mTitle").value = d.title;
+  document.getElementById("mCategory").value = d.category;
+  document.getElementById("mNote").value = d.note;
+  modalBack.style.display = "flex";
+  document.getElementById("mTitle").focus();
+}
+
+function viewDoc(id){
+  const d = docs.find(x=>x.id===id);
+  if(!d) return alert("Data tidak ditemukan");
+  alert(`Judul: ${d.title}\nKategori: ${d.category}\n\nCatatan:\n${d.note}`);
+}
+
+function confirmDelete(id){
+  if(confirm("Yakin ingin menghapus dokumen ini?")) removeDoc(id);
+}
+
+/* --------------------------
+  Quick form (aside)
+---------------------------*/
+document.getElementById("quickForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const t = document.getElementById("title").value.trim();
+  const c = document.getElementById("category").value.trim();
+  const n = document.getElementById("note").value.trim();
+  if(!t || !c) { alert("Judul & kategori wajib"); return; }
+  addDoc({ title:t, category:c, note:n });
+  this.reset();
+});
+document.getElementById("btnClear").addEventListener("click", ()=> document.getElementById("quickForm").reset());
+
+/* --------------------------
+  Search & filter events
+---------------------------*/
+document.getElementById("q").addEventListener("input", function(e){
+  currentPage = 1;
+  renderList(e.target.value.trim());
+});
+document.getElementById("sortSel").addEventListener("change", ()=> renderList(document.getElementById("q").value.trim()));
+
+document.getElementById("filterCategory").addEventListener("keydown", function(e){
+  if(e.key === "Enter") {
+    lastFilterCategory = this.value.trim();
+    currentPage = 1;
+    renderList(document.getElementById("q").value.trim());
+  }
+});
+
+/* --------------------------
+  Backup / Restore / Export
+---------------------------*/
+document.getElementById("btnBackup").addEventListener("click", ()=>{
+  const dataStr = JSON.stringify(docs, null, 2);
+  const blob = new Blob([dataStr], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `legal_docs_backup_${new Date().toISOString().slice(0,19).replace(/:/g,'')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("btnRestore").addEventListener("click", ()=>{
+  document.getElementById("fileInput").click();
+});
+document.getElementById("fileInput").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      if(!Array.isArray(parsed)) throw new Error("Format tidak sesuai (harus array)");
+      if(!confirm(`Restore akan menimpa data saat ini dengan ${parsed.length} item. Lanjutkan?`)) return;
+      docs = parsed.map(it=>{
+        // normalize older items (ensure id and timestamps)
+        return {
+          id: it.id || uid(),
+          title: it.title || "",
+          category: it.category || "",
+          note: it.note || "",
+          createdAt: it.createdAt || Date.now(),
+          updatedAt: it.updatedAt || Date.now()
+        };
+      });
+      save(); initFuse(); renderList(document.getElementById("q").value.trim());
+      alert("Restore berhasil");
+    }catch(err){
+      alert("Gagal restore: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+/* Export JSON */
+document.getElementById("btnExportJson").addEventListener("click", ()=>{
+  const dataStr = JSON.stringify(docs, null, 2);
+  const blob = new Blob([dataStr], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "legal_docs_export.json"; a.click(); URL.revokeObjectURL(url);
+});
+
+/* Export CSV */
+document.getElementById("btnExportCsv").addEventListener("click", ()=>{
+  if(!docs.length) return alert("Tidak ada data untuk diexport");
+  const headers = ["id","title","category","note","createdAt","updatedAt"];
+  const rows = docs.map(d => headers.map(h => `"${(d[h]||"").toString().replace(/"/g,'""')}"`).join(","));
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "legal_docs_export.csv"; a.click(); URL.revokeObjectURL(url);
+});
+
+/* Export PDF (basic) using jsPDF */
+document.getElementById("btnExportPdf").addEventListener("click", async ()=>{
+  if(!docs.length) return alert("Tidak ada data untuk diexport");
+  const { jsPDF } = window.jspdf;
+  const docPdf = new jsPDF({unit:"pt", format:"a4"});
+  docPdf.setFontSize(12);
+  docPdf.setTextColor(20,20,20);
+  let y = 40;
+  docPdf.setFontSize(16);
+  docPdf.text("Legal Document Library - Export", 40, y); y+=24;
+  docPdf.setFontSize(10);
+  docs.forEach((d, idx)=>{
+    const title = `${idx+1}. ${d.title} [${d.category}]`;
+    docPdf.text(title, 40, y); y+=16;
+    const noteLines = docPdf.splitTextToSize(d.note || "-", 500);
+    noteLines.forEach(ln => { docPdf.text(ln, 60, y); y+=12; });
+    y+=10;
+    if(y > 700){ docPdf.addPage(); y = 40; }
+  });
+  docPdf.save("legal_docs_export.pdf");
+});
+
+/* --------------------------
+  Password (client-side) - optional
+---------------------------*/
+document.getElementById("btnToggleLock").addEventListener("click", ()=>{
+  const current = localStorage.getItem(PW_KEY);
+  if(current){
+    if(confirm("Password sudah ada. Hapus password (unlock)?")){ localStorage.removeItem(PW_KEY); alert("Password dihapus (sistem tidak terkunci)."); }
+    return;
+  }
+  const pw = prompt("Masukkan password baru untuk proteksi (disimpan di browser, client-side):");
+  if(pw && pw.length>=4){
+    localStorage.setItem(PW_KEY, pw);
+    alert("Password tersimpan di browser. Fitur ini hanya memberikan proteksi ringan (client-side).");
+  } else {
+    alert("Password harus >= 4 karakter. Dibatalkan.");
+  }
+});
+
+/* On load: check password */
+function checkPasswordOnLoad(){
+  const pw = localStorage.getItem(PW_KEY);
+  if(!pw) return Promise.resolve(true);
+  return new Promise((res)=>{
+    let tries = 0;
+    function ask(){
+      const v = prompt("Sistem terkunci. Masukkan password:");
+      if(v === pw){ res(true); }
+      else {
+        tries++;
+        if(tries>=3){ alert("Terlalu banyak percobaan. Aplikasi akan tetap berjalan tetapi data mungkin tetap terlihat."); res(true); }
+        else { alert("Password salah."); ask(); }
+      }
+    }
+    ask();
+  });
+}
+
+/* --------------------------
+  helpers & startup
+---------------------------*/
+function viewInit(){
+  initFuse();
+  renderList();
+  document.getElementById("q").focus();
+}
+
+/* small helpers */
+window.openEdit = openEdit;
+window.viewDoc = viewDoc;
+window.confirmDelete = confirmDelete;
+
+checkPasswordOnLoad().then(()=> {
+  initFuse();
+  renderList();
+});
+
+/* attach global for debugging if needed */
+window.__app = { getDocs: ()=>docs, save, initFuse };
+
+</script>
+</body>
+</html>
